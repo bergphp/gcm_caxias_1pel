@@ -91,7 +91,7 @@
     <div class="main-content" id="mainContent">
         <div class="page-header">
             <h2>Usuários</h2>
-            <button class="btn-primary">+ Novo Usuário</button>
+            <button class="btn-primary" onclick="abrirModalUsuario()">+ Novo Usuário</button>
         </div>
 
         <div class="table-card">
@@ -157,6 +157,88 @@
         const nomeSalvo = sessionStorage.getItem('usuario');
         if (nomeSalvo) document.getElementById('userName').textContent = nomeSalvo;
     </script>
- <button class="btn-primary" onclick="abrirModalUsuario()">+ Novo Usuário</button>    
+    <!-- Modal Novo Usuário -->
+<style>
+    .modal {
+        display: none; position: fixed; z-index: 200; left: 0; top: 0;
+        width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+        align-items: center; justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+        background: white; padding: 30px; border-radius: 12px;
+        width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { color: #333; }
+    .close { background: none; border: none; font-size: 28px; cursor: pointer; color: #999; }
+    .input-group { margin-bottom: 16px; text-align: left; }
+    .input-group label { display: block; margin-bottom: 6px; color: #555; font-weight: bold; }
+    .input-group input, .input-group select {
+        width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;
+    }
+    .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .btn-cancel { flex: 1; padding: 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-save { flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+</style>
+
+<div class="modal" id="modalUsuario">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Novo Usuário</h3>
+            <button class="close" onclick="fecharModalUsuario()">&times;</button>
+        </div>
+        <form id="formUsuario">
+            <div class="input-group">
+                <label>Nome completo</label>
+                <input type="text" id="nomeUsuario" required>
+            </div>
+            <div class="input-group">
+                <label>E-mail</label>
+                <input type="email" id="emailUsuario" required>
+            </div>
+            <div class="input-group">
+                <label>Senha</label>
+                <input type="password" id="senhaUsuario" minlength="6" required>
+            </div>
+            <div class="input-group">
+                <label>Status</label>
+                <select id="statusUsuario">
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="fecharModalUsuario()">Cancelar</button>
+                <button type="submit" class="btn-save">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function abrirModalUsuario() {
+        document.getElementById('modalUsuario').classList.add('show');
+    }
+    function fecharModalUsuario() {
+        document.getElementById('modalUsuario').classList.remove('show');
+        document.getElementById('formUsuario').reset();
+    }
+    document.getElementById('formUsuario').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Aqui você pegaria os dados e enviaria pro backend
+        console.log('Usuário:', {
+            nome: document.getElementById('nomeUsuario').value,
+            email: document.getElementById('emailUsuario').value,
+            status: document.getElementById('statusUsuario').value
+        });
+        fecharModalUsuario();
+        alert('Usuário criado! Recarregue pra ver na tabela.');
+    });
+    // Fecha modal clicando fora
+    document.getElementById('modalUsuario').addEventListener('click', function(e) {
+        if (e.target === this) fecharModalUsuario();
+    });
+</script>  
 </body>
 </html>
