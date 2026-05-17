@@ -176,11 +176,12 @@
             const errorMsg = document.getElementById('errorMsg');
             
             if (usuario === 'admin' && senha === '1234') {
-                alert('Login realizado com sucesso!');
-                window.location.href = 'dashboard.html';
-            } else {
-                errorMsg.style.display = 'block';
-            }
+    sessionStorage.setItem('logado', 'true');
+    sessionStorage.setItem('usuario', usuario);
+    window.location.href = 'dashboard.html';
+} else {
+    errorMsg.style.display = 'block';
+}
         });
     </script>
 </body>
