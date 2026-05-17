@@ -25,14 +25,36 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             width: 100%;
             max-width: 360px;
+            text-align: center;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 16px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
         }
         h2 {
-            text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 8px;
             color: #333;
         }
+        .welcome {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            text-align: left;
         }
         label {
             display: block;
@@ -51,6 +73,19 @@
             outline: none;
             border-color: #667eea;
         }
+        .forgot-password {
+            text-align: right;
+            margin-top: -8px;
+            margin-bottom: 20px;
+        }
+        .forgot-password a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
         button {
             width: 100%;
             padding: 12px;
@@ -61,9 +96,34 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            margin-bottom: 16px;
         }
         button:hover {
             background: #5a6fd8;
+        }
+        .divider {
+            color: #999;
+            font-size: 14px;
+            margin: 16px 0;
+            position: relative;
+        }
+        .divider::before, .divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #ddd;
+        }
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        .signup-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .signup-btn:hover {
+            background: #f5f6ff;
         }
         .error {
             color: #e74c3c;
@@ -75,7 +135,12 @@
 </head>
 <body>
     <div class="login-container">
-        <h2>Entrar</h2>
+        <div class="logo">
+            <img src="SUA_LOGO_AQUI.png" alt="Logo">
+        </div>
+        <h2>Bem-vindo de volta</h2>
+        <p class="welcome">Faça login para acessar sua conta</p>
+        
         <form id="loginForm">
             <div class="input-group">
                 <label for="usuario">Usuário</label>
@@ -85,7 +150,19 @@
                 <label for="senha">Senha</label>
                 <input type="password" id="senha" required>
             </div>
+            
+            <div class="forgot-password">
+                <a href="esqueci-senha.html">Esqueci a senha</a>
+            </div>
+            
             <button type="submit">Acessar</button>
+            
+            <div class="divider">ou</div>
+            
+            <button type="button" class="signup-btn" onclick="window.location.href='cadastro.html'">
+                Criar conta
+            </button>
+            
             <div class="error" id="errorMsg">Usuário ou senha inválidos</div>
         </form>
     </div>
@@ -98,7 +175,6 @@
             const senha = document.getElementById('senha').value;
             const errorMsg = document.getElementById('errorMsg');
             
-            // Login de teste: admin / 1234
             if (usuario === 'admin' && senha === '1234') {
                 alert('Login realizado com sucesso!');
                 // window.location.href = 'dashboard.html';
