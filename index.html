@@ -1,189 +1,111 @@
-<?php
-require 'config.php';
-require 'config_whatsapp.php';
-
-// Verifica token do webhook
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $verify_token = 'MEU_TOKEN_SECRETO_123';
-    if ($_GET['hub_verify_token'] === $verify_token) {
-        echo $_GET['hub_challenge'];
-        exit;
-    }
-    http_response_code(403);
-    exit;
-}
-
-$input = json_decode(file_get_contents('php://input'), true);
-
-if (isset($input['entry'][0]['changes'][0]['value']['messages'][0])) {
-    $msg = $input['entry'][0]['changes'][0]['value']['messages'][0];
-    $from = $msg['from'];
-    $texto = strtolower(trim($msg['text']['body']?? ''));
-
-    // Comando /meta
-    if ($texto === '/meta') {
-        $mesAnoAtual = date('Y-m');
-        $mesAtualInicio = date('Y-m-01');
-        $mesAtualFim = date('Y-m-t');
-
-        $stmtMeta = $pdo->prepare("SELECT valor_meta FROM metas WHERE mes_ano =?");
-        $stmtMeta->execute([$mesAnoAtual]);
-        $metaMensal = $stmtMeta->fetchColumn()?: 0;
-
-        $stmtVendas = $pdo->prepare("SELECT COALESCE(SUM(valor), 0) FROM vendas WHERE data_venda BETWEEN? AND?");
-        $stmtVendas->execute([$mesAtualInicio, $mesAtualFim]);
-        $totalMesAtual = $stmtVendas->fetchColumn();
-
-        $percentual = $metaMensal > 0? ($totalMesAtual / $metaMensal) * 100 : 0;
-        $faltante = max(0, $metaMensal - $totalMesAtual);
-
-        $diasPassados = date('j');
-        $diasNoMes = date('t');
-        $mediaDiaria = $diasPassados > 0? $totalMesAtual / $diasPassados : 0;
-        $projecao = $mediaDiaria * $diasNoMes;
-
-        $resposta = "📊 *Status da Meta - ". date('m/Y'). "*\n\n";
-        $resposta.= "💰 Atual: R$ ". number_format($totalMesAtual, 2, ',', '.'). "\n";
-        $resposta.= "🎯 Meta: R$ ". number_format($metaMensal, 2, ',', '.'). "\n";
-        $resposta.= "📈 Progresso: ". round($percentual, 1). "%\n";
-
-        if ($percentual >= 100) {
-            $resposta.= "\n🎉 *META BATIDA!* 🎉\n";
-        } else {
-            $resposta.= "💵 Faltam: R$ ". number_format($faltante, 2, ',', '.'). "\n";
-            $resposta.= "\n📅 Projeção: R$ ". number_format($projecao, 2, ',', '.');
-            $resposta.= " (". round(($projecao / $metaMensal) * 100, 1). "%)\n";
-            $resposta.= "📊 Média: R$ ". number_format($mediaDiaria, 2, ',', '.'). "/dia\n";
-            $resposta.= "⏳ Dias restantes: ". ($diasNoMes - $diasPassados);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 360px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Entrar</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="usuario">Usuário</label>
+                <input type="text" id="usuario" required>
+            </div>
+            <div class="input-group">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" required>
+            </div>
+            <button type="submit">Acessar</button>
+            <div class="error" id="errorMsg">Usuário ou senha inválidos</div>
+        </form>
+    </div>
 
-        enviarWhatsAppTexto($resposta);
-    }
-
-    // Comando /vendas hoje
-    if ($texto === '/vendas hoje' || $texto === '/vendas') {
-        $hoje = date('Y-m-d');
-
-        $stmtHoje = $pdo->prepare("SELECT COALESCE(SUM(valor), 0) as total, COUNT(*) as qtd FROM vendas WHERE data_venda =?");
-        $stmtHoje->execute([$hoje]);
-        $vendasHoje = $stmtHoje->fetch(PDO::FETCH_ASSOC);
-
-        // Pega últimas 5 vendas do dia
-        $stmtUltimas = $pdo->prepare("
-            SELECT v.valor, v.hora_venda, c.nome as cliente
-            FROM vendas v
-            LEFT JOIN clientes c ON c.id = v.cliente_id
-            WHERE v.data_venda =?
-            ORDER BY v.id DESC LIMIT 5
-        ");
-        $stmtUltimas->execute([$hoje]);
-        $ultimasVendas = $stmtUltimas->fetchAll(PDO::FETCH_ASSOC);
-
-        $resposta = "💵 *Vendas de Hoje - ". date('d/m/Y'). "*\n\n";
-        $resposta.= "💰 Total: R$ ". number_format($vendasHoje['total'], 2, ',', '.'). "\n";
-        $resposta.= "📦 Pedidos: ". $vendasHoje['qtd']. "\n";
-
-        if (count($ultimasVendas) > 0) {
-            $resposta.= "\n🕐 *Últimas vendas:*\n";
-            foreach ($ultimasVendas as $v) {
-                $hora = date('H:i', strtotime($v['hora_venda']));
-                $cliente = $v['cliente']?: 'Cliente avulso';
-                $resposta.= $hora. " - R$ ". number_format($v['valor'], 2, ',', '.'). " - ". $cliente. "\n";
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const usuario = document.getElementById('usuario').value;
+            const senha = document.getElementById('senha').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            // Login de teste: admin / 1234
+            if (usuario === 'admin' && senha === '1234') {
+                alert('Login realizado com sucesso!');
+                // window.location.href = 'dashboard.html';
+            } else {
+                errorMsg.style.display = 'block';
             }
-        }
-
-        enviarWhatsAppTexto($resposta);
-    }
-
-    // Comando /grafico
-    if ($texto === '/grafico' || $texto === '/gráfico') {
-        // Busca vendas dos últimos 7 dias
-        $dataInicio = date('Y-m-d', strtotime('-6 days'));
-        $dataFim = date('Y-m-d');
-
-        $stmt = $pdo->prepare("
-            SELECT DATE_FORMAT(data_venda, '%d/%m') as dia, COALESCE(SUM(valor), 0) as total
-            FROM vendas
-            WHERE data_venda BETWEEN? AND?
-            GROUP BY data_venda
-            ORDER BY data_venda ASC
-        ");
-        $stmt->execute([$dataInicio, $dataFim]);
-        $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $labels = [];
-        $valores = [];
-        foreach ($dados as $d) {
-            $labels[] = $d['dia'];
-            $valores[] = floatval($d['total']);
-        }
-
-        // Gera gráfico via QuickChart
-        $chartConfig = [
-            'type' => 'line',
-            'data' => [
-                'labels' => $labels,
-                'datasets' => [[
-                    'label' => 'Vendas R$',
-                    'data' => $valores,
-                    'borderColor' => 'rgb(102, 126, 234)',
-                    'backgroundColor' => 'rgba(102, 126, 234, 0.1)',
-                    'tension' => 0.4,
-                    'fill' => true,
-                    'borderWidth' => 3
-                ]]
-            ],
-            'options' => [
-                'title' => ['display' => true, 'text' => 'Últimos 7 dias'],
-                'plugins' => ['legend' => ['display' => false]],
-                'scales' => ['y' => ['beginAtZero' => true]]
-            ]
-        ];
-
-        $chartUrl = 'https://quickchart.io/chart?width=600&height=400&c='. urlencode(json_encode($chartConfig));
-
-        // Envia imagem
-        enviarWhatsAppImagem($chartUrl, '📈 Vendas dos últimos 7 dias');
-    }
-
-    // Comando /ranking
-    if ($texto === '/ranking') {
-        $mesAtualInicio = date('Y-m-01');
-        $mesAtualFim = date('Y-m-t');
-
-        $stmtRank = $pdo->prepare("
-            SELECT p.nome, SUM(vi.quantidade) as qtd, SUM(vi.quantidade * vi.preco_unitario) as total
-            FROM venda_itens vi
-            JOIN produtos p ON p.id = vi.produto_id
-            JOIN vendas v ON v.id = vi.venda_id
-            WHERE v.data_venda BETWEEN? AND?
-            GROUP BY p.id, p.nome
-            ORDER BY qtd DESC LIMIT 5
-        ");
-        $stmtRank->execute([$mesAtualInicio, $mesAtualFim]);
-        $ranking = $stmtRank->fetchAll(PDO::FETCH_ASSOC);
-
-        $resposta = "🏆 *Top 5 Produtos - ". date('m/Y'). "*\n\n";
-        foreach ($ranking as $i => $p) {
-            $resposta.= ($i + 1). ". ". $p['nome']. "\n";
-            $resposta.= " ". $p['qtd']. " un - R$ ". number_format($p['total'], 2, ',', '.'). "\n";
-        }
-
-        enviarWhatsAppTexto($resposta);
-    }
-
-    // Comando /help
-    if ($texto === '/help' || $texto === '/ajuda') {
-        $resposta = "🤖 *Comandos disponíveis:*\n\n";
-        $resposta.= "/meta - Status da meta mensal\n";
-        $resposta.= "/vendas - Vendas de hoje\n";
-        $resposta.= "/grafico - Gráfico dos últimos 7 dias\n";
-        $resposta.= "/ranking - Top 5 produtos vendidos\n";
-        $resposta.= "/help - Mostra esta ajuda";
-
-        enviarWhatsAppTexto($resposta);
-    }
-}
-
-http_response_code(200);
-?>
+        });
+    </script>
+</body>
+</html>
