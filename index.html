@@ -1,3 +1,35 @@
+<?php
+// Inicializa a sessão do PHP para controlar o login
+session_start();
+
+// Se o usuário já estiver logado, redireciona direto para o dashboard
+if (isset($_SESSION['logado']) && $_SESSION['logado'] === true) {
+    header('Location: dashboard.php');
+    exit;
+}
+
+$erro = false;
+
+// Verifica se o formulário foi enviado via método POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Captura e limpa os dados enviados para evitar espaços em branco bobos
+    $usuario = trim($_POST['usuario'] ?? '');
+    $senha = trim($_POST['senha'] ?? '');
+
+    // Validação segura no lado do servidor
+    if ($usuario === 'admin' && $senha === '1234') {
+        // Salva os dados na sessão do servidor
+        $_SESSION['logado'] = true;
+        $_SESSION['usuario'] = $usuario;
+
+        // Redireciona para o dashboard em PHP
+        header('Location: dashboard.php');
+        exit;
+    } else {
+        $erro = true;
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -129,7 +161,6 @@
             color: #e74c3c;
             text-align: center;
             margin-top: 12px;
-            display: none;
         }
     </style>
 </head>
@@ -141,14 +172,17 @@
         <h2>Bem-vindo de volta</h2>
         <p class="welcome">Faça login para acessar sua conta</p>
         
-        <form id="loginForm">
+        <!-- Adicionado o method="POST" para enviar os dados de forma segura -->
+        <form id="loginForm" method="POST" action="">
             <div class="input-group">
                 <label for="usuario">Usuário</label>
-                <input type="text" id="usuario" required>
+                <!-- Adicionado o atributo name="usuario" necessário para o PHP capturar o dado -->
+                <input type="text" id="usuario" name="usuario" value="<?php echo htmlspecialchars($usuario ?? ''); ?>" required>
             </div>
             <div class="input-group">
                 <label for="senha">Senha</label>
-                <input type="password" id="senha" required>
+                <!-- Adicionado o atributo name="senha" necessário para o PHP capturar o dado -->
+                <input type="password" id="senha" name="senha" required>
             </div>
             
             <div class="forgot-password">
@@ -163,26 +197,11 @@
                 Criar conta
             </button>
             
-            <div class="error" id="errorMsg">Usuário ou senha inválidos</div>
+            <!-- O PHP decide se exibe ou não a mensagem de erro direto na renderização -->
+            <?php if ($erro): ?>
+                <div class="error" id="errorMsg">Usuário ou senha inválidos</div>
+            <?php endif; ?>
         </form>
     </div>
-
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const usuario = document.getElementById('usuario').value;
-            const senha = document.getElementById('senha').value;
-            const errorMsg = document.getElementById('errorMsg');
-            
-            if (usuario === 'admin' && senha === '1234') {
-    sessionStorage.setItem('logado', 'true');
-    sessionStorage.setItem('usuario', usuario);
-    window.location.href = 'dashboard.html';
-} else {
-    errorMsg.style.display = 'block';
-}
-        });
-    </script>
 </body>
 </html>
